@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>朗読劇</title>
+<style>
+  :root { --bg:#faf8f4; --fg:#222; --muted:#777; --line:#e4dfd6; --now:#fff3c4; --r1:#2f5d8a; --r2:#a3412f; --r3:#3f7a3a; --r4:#7a4f9a; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#1b1a18; --fg:#eee; --muted:#999; --line:#333; --now:#4a4120; --r1:#8bb8e8; --r2:#f0a08f; --r3:#9fd49a; --r4:#cfa8ef; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; }
+  header { position:sticky; top:0; background:var(--bg); border-bottom:1px solid var(--line); padding:12px 16px; z-index:1; }
+  h1 { font-size:1.2rem; margin:0 0 4px; }
+  .meta { color:var(--muted); font-size:.85rem; }
+  .controls { display:flex; gap:8px; align-items:center; margin-top:8px; flex-wrap:wrap; }
+  button { font:inherit; padding:6px 14px; border:1px solid var(--line); background:transparent; color:var(--fg); border-radius:6px; cursor:pointer; }
+  #stage { display:flex; gap:24px; justify-content:center; padding:12px 0 0; }
+  .actor { text-align:center; opacity:.45; transition:opacity .2s; }
+  .actor.on { opacity:1; }
+  .face { width:64px; height:64px; border-radius:50%; border:2px solid currentColor; position:relative; margin:0 auto 6px; }
+  .mouth { position:absolute; left:50%; top:62%; width:18px; height:3px; background:currentColor; border-radius:9px; transform:translate(-50%,-50%); transition:all 60ms; }
+  main { max-width:760px; margin:0 auto; padding:8px 16px 80px; }
+  .ev { padding:6px 10px; border-radius:6px; cursor:pointer; line-height:1.8; }
+  .ev.now { background:var(--now); }
+  .ev .who { font-weight:bold; margin-right:1em; }
+  .dir { color:var(--muted); padding-left:3em; font-size:.92rem; }
+  .dir.inline { padding-left:5em; }
+  .pause { color:var(--muted); font-size:.75rem; margin-left:.5em; }
+  footer { color:var(--muted); font-size:.8rem; text-align:center; padding:24px 16px; }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">読み込み中…</h1>
+  <div class="meta" id="meta"></div>
+  <div class="controls">
+    <button id="play">▶ 再生</button>
+    <button id="stop">■ 停止</button>
+    <span class="meta" id="clock">0:00 / 0:00</span>
+  </div>
+  <div id="stage"></div>
+</header>
+<main id="list"></main>
+<footer id="credits"></footer>
+<script>
+const play = new URLSearchParams(location.search).get("play") || "sample";
+const base = `../plays/${play}/`;
+const mouthShape = { a:[22,14], i:[24,5], u:[10,9], e:[22,9], o:[14,13], n:[16,3], "-":[18,3] };
+let tl, cur = -1, timer = null, audio = null, raf = null, playing = false;
+
+const fmt = ms => { const s = Math.round(ms/1000); return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`; };
+const roleIndex = id => tl.roles.findIndex(r => r.id === id);
+
+fetch(base + "timeline.json").then(r => r.json()).then(data => {
+  tl = data;
+  document.title = tl.title + "（朗読劇）";
+  document.getElementById("title").textContent = tl.title;
+  document.getElementById("meta").textContent = `${tl.author}　${tl.roles.map(r => r.name + "：" + (r.voice.name || "")).join("　")}`;
+  document.getElementById("clock").textContent = `0:00 / ${fmt(tl.total_ms)}`;
+  document.getElementById("credits").innerHTML = [...(tl.credits || []), tl.source ? `出典: ${tl.source}` : ""].filter(Boolean).join("<br>");
+  const stage = document.getElementById("stage");
+  tl.roles.forEach((r, i) => {
+    stage.insertAdjacentHTML("beforeend", `<div class="actor" id="a-${r.id}" style="color:var(--r${i%4+1})"><div class="face"><div class="mouth"></div></div>${r.name}</div>`);
+  });
+  const list = document.getElementById("list");
+  tl.items.forEach((it, k) => {
+    const el = document.createElement("div");
+    el.id = "ev" + k;
+    if (it.type === "line") {
+      const i = roleIndex(it.role);
+      el.className = "ev";
+      el.innerHTML = `<span class="who" style="color:var(--r${i%4+1})">${tl.roles[i].name}</span>${it.text}`;
+    } else {
+      el.className = "ev dir" + (it.inline ? " inline" : "");
+      el.textContent = it.inline ? `（${it.text}）` : it.text;
+    }
+    if (k > 0 && it.start_ms - (tl.items[k-1].start_ms + tl.items[k-1].dur_ms) >= 1000)
+      el.insertAdjacentHTML("beforeend", `<span class="pause">［間 ${((it.start_ms - tl.items[k-1].start_ms - tl.items[k-1].dur_ms)/1000).toFixed(1)}秒］</span>`);
+    el.onclick = () => startAt(k);
+    list.appendChild(el);
+  });
+}).catch(e => { document.getElementById("title").textContent = "timeline.json を読めません: " + e; });
+
+function stop() {
+  playing = false; clearTimeout(timer); cancelAnimationFrame(raf);
+  if (audio) { audio.pause(); audio = null; }
+  document.querySelectorAll(".actor").forEach(a => a.classList.remove("on"));
+  setMouth(null);
+}
+function startAt(k) { stop(); playing = true; step(k, 0); }
+function step(k, wait) {
+  if (!playing || k >= tl.items.length) { stop(); return; }
+  timer = setTimeout(() => show(k), wait);
+}
+function show(k) {
+  const it = tl.items[k];
+  document.querySelector(".ev.now")?.classList.remove("now");
+  const el = document.getElementById("ev" + k);
+  el.classList.add("now");
+  el.scrollIntoView({ block: "center", behavior: "smooth" });
+  document.getElementById("clock").textContent = `${fmt(it.start_ms)} / ${fmt(tl.total_ms)}`;
+  cur = k;
+  const next = tl.items[k+1];
+  const gap = next ? next.start_ms - (it.start_ms + it.dur_ms) : 0;
+  document.querySelectorAll(".actor").forEach(a => a.classList.toggle("on", it.type === "line" && a.id === "a-" + it.role));
+  if (!it.audio) { step(k+1, it.dur_ms + gap); return; }
+  audio = new Audio(base + it.audio);
+  audio.onended = () => { setMouth(null); step(k+1, gap); };
+  audio.play();
+  if (it.type === "line") animateMouth(it);
+}
+function animateMouth(it) {
+  const a = audio;
+  const tick = () => {
+    if (!playing || audio !== a) return;
+    const ms = a.currentTime * 1000;
+    let v = "-";
+    for (const [t, vw] of it.mouth) { if (t <= ms) v = vw; else break; }
+    setMouth(it.role, v);
+    raf = requestAnimationFrame(tick);
+  };
+  tick();
+}
+function setMouth(role, v) {
+  document.querySelectorAll(".actor .mouth").forEach(m => { m.style.width = "18px"; m.style.height = "3px"; });
+  if (!role) return;
+  const m = document.querySelector(`#a-${role} .mouth`);
+  const [w, h] = mouthShape[v] || mouthShape["-"];
+  m.style.width = w + "px"; m.style.height = h + "px";
+}
+document.getElementById("play").onclick = () => startAt(cur < 0 || cur >= tl.items.length - 1 ? 0 : cur);
+document.getElementById("stop").onclick = stop;
+</script>
+</body>
+</html>
