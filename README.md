@@ -29,7 +29,14 @@ python3 -m http.server 8000
 # → http://localhost:8000/web/?play=<id>
 ```
 
-試しの台本 `plays/sample/`（このリポジトリで書いた短い会話）で、音声まで作ってある。
+作品:
+
+- `plays/kamifusen/` … 岸田國士「紙風船」（青空文庫、図書カード https://www.aozora.gr.jp/cards/001154/card52082.html ）。`source.txt` は青空文庫のファイルのまま（Shift_JIS）。台詞 256、音声まで作ってある。`http://localhost:8000/web/?play=kamifusen`
+- `plays/sample/` … 試しの台本（このリポジトリで書いた短い会話）。
+
+旧仮名づかいの作品（青空文庫の新字旧仮名など）は、script.json に `"kana": "historical"` を入れると、`tools/yomi.py` が「行つて→行って」「いゝ→いい」「だらう→だろう」のように読みに直してから合成する（表示は元のまま）。規則で直らない台詞は、その event に `"read": "読み"` を書く。`python3 tools/yomi.py plays/<id>/script.json` で読みの一覧を確かめられる。
+
+本文の役名に誤記があるときは `--alias 奏=妻` のように読み替える（紙風船に 1 か所ある）。
 
 ## 台本データ（script.json）
 

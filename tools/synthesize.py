@@ -7,12 +7,16 @@
 - 出力: plays/<id>/audio/*.mp3 と plays/<id>/timeline.json
 - 同じ文・同じ声の音声はファイル名のハッシュで再利用する（script.json を直して再実行すると、変わった台詞だけ作り直す）。
 - 台詞の中の「……」「――」で台詞を分け、間に 600 ms の無音を入れる。
+- script.json に "kana": "historical" があれば、旧仮名を tools/yomi.py で読みにしてから合成する（event の "read" が優先）。
 - 口パク用に、モーラごとの母音の時刻（mouth: [[ms, "a"], ...]）を timeline.json に入れる。
 """
 import argparse, hashlib, io, json, re, subprocess, sys, wave
 from pathlib import Path
 
 import requests
+
+sys.path.insert(0, str(Path(__file__).parent))
+from yomi import spoken_text  # noqa: E402
 
 INNER_PAUSE_MS = 600
 SPLIT_RE = re.compile(r"(?:…{2,}|―{2,}|─{2,}|-{2,})")
@@ -61,8 +65,8 @@ def synth_segment(engine, text, sid, v):
     return frames, params, dur, marks
 
 
-def synth_event(engine, e, sid, v, out_mp3):
-    parts = [p for p in SPLIT_RE.split(e["text"]) if p.strip(" 　。、")]
+def synth_event(engine, text, sid, v, out_mp3):
+    parts = [p for p in SPLIT_RE.split(text) if p.strip(" 　。、")]
     if not parts:
         return None
     pcm, params, offset, mouth = b"", None, 0.0, []
@@ -107,12 +111,13 @@ def main():
         speak = e["type"] == "line" or (script.get("read_directions") and not e.get("inline") and not e.get("silent"))
         if speak:
             sid, v = voice_for(script, e)
-            key = hashlib.sha1(json.dumps([e["text"], sid, v], ensure_ascii=False, sort_keys=True).encode()).hexdigest()[:10]
+            said = spoken_text(script, e)  # 旧仮名の作品は読みにしてから合成する（tools/yomi.py）
+            key = hashlib.sha1(json.dumps([said, sid, v], ensure_ascii=False, sort_keys=True).encode()).hexdigest()[:10]
             name = f"{key}.mp3"
             if name in meta and (audio_dir / name).exists():
                 dur, mouth = meta[name]["dur_ms"], meta[name]["mouth"]
             else:
-                r = synth_event(a.engine, e, sid, v, audio_dir / name)
+                r = synth_event(a.engine, said, sid, v, audio_dir / name)
                 if r is None:
                     speak = False
                 else:
