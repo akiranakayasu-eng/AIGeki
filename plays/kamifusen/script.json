@@ -17,33 +17,48 @@
       "id": "r1",
       "name": "夫",
       "voice": {
-        "speaker": 13,
-        "name": "青山龍星",
+        "speaker": 94,
+        "name": "中部つるぎ",
         "styles": {
-          "calm": 13,
-          "happy": 83,
-          "sad": 85,
-          "angry": 82,
-          "soft": 84
+          "ノーマル": 94,
+          "怒り": 95,
+          "ヒソヒソ": 96,
+          "おどおど": 97,
+          "絶望と敗北": 98
+        },
+        "emotion_styles": {
+          "calm": "ノーマル",
+          "happy": "ノーマル",
+          "soft": "ノーマル",
+          "sad": "ノーマル",
+          "angry": "怒り"
         },
         "speedScale": 1.0
-      }
+      },
+      "look": "man"
     },
     {
       "id": "r2",
       "name": "妻",
       "voice": {
-        "speaker": 20,
-        "name": "もち子さん",
+        "speaker": 122,
+        "name": "暁記ミタマ",
         "styles": {
-          "calm": 20,
-          "happy": 79,
-          "sad": 77,
-          "angry": 78,
-          "soft": 80
+          "ノーマル": 122,
+          "怒り": 123,
+          "哀しみ": 124,
+          "ささやき": 125
+        },
+        "emotion_styles": {
+          "calm": "ノーマル",
+          "happy": "ノーマル",
+          "soft": "ノーマル",
+          "sad": "哀しみ",
+          "angry": "怒り"
         },
         "speedScale": 1.0
-      }
+      },
+      "look": "woman"
     }
   ],
   "events": [
@@ -537,7 +552,8 @@
       "role": "r1",
       "text": "どうしたい。",
       "emotion": "soft",
-      "pause_before_ms": 500
+      "pause_before_ms": 500,
+      "style": "おどおど"
     },
     {
       "type": "line",
@@ -551,7 +567,8 @@
       "role": "r1",
       "text": "どうして。",
       "emotion": "calm",
-      "pause_before_ms": 700
+      "pause_before_ms": 700,
+      "style": "おどおど"
     },
     {
       "type": "line",
@@ -820,7 +837,8 @@
       "role": "r2",
       "text": "ほんとを云ふと、あたしは、黙つてあなたのそばにゐさへすれば、それで満足なの。あなたが、もう少しあたしに気をつけて下さると、それこそ、どんなにいい方だか知れないんだけれど……。",
       "emotion": "soft",
-      "pause_before_ms": 700
+      "pause_before_ms": 700,
+      "style": "ささやき"
     },
     {
       "type": "direction",
@@ -1350,14 +1368,16 @@
       "role": "r2",
       "text": "バスルームつて……お風呂場ね。",
       "emotion": "happy",
-      "pause_before_ms": 400
+      "pause_before_ms": 400,
+      "style": "ささやき"
     },
     {
       "type": "line",
       "role": "r1",
       "text": "しツ。あ、さう。ぢや、それにしよう。いや、見ないでもいゝ。それから、君のうちに飛行機はないの。",
       "emotion": "happy",
-      "pause_before_ms": 400
+      "pause_before_ms": 400,
+      "style": "ヒソヒソ"
     },
     {
       "type": "line",
@@ -1420,7 +1440,8 @@
       "role": "r2",
       "text": "人が見るわよ。",
       "emotion": "happy",
-      "pause_before_ms": 400
+      "pause_before_ms": 400,
+      "style": "ささやき"
     },
     {
       "type": "line",
@@ -1507,7 +1528,8 @@
       "role": "r1",
       "text": "こゝへ来て見ろ。",
       "emotion": "soft",
-      "pause_before_ms": 3300
+      "pause_before_ms": 3300,
+      "style": "ヒソヒソ"
     },
     {
       "type": "direction",
@@ -1530,7 +1552,8 @@
       "role": "r1",
       "text": "来て御覧。",
       "emotion": "soft",
-      "pause_before_ms": 200
+      "pause_before_ms": 200,
+      "style": "ヒソヒソ"
     },
     {
       "type": "line",
@@ -1544,7 +1567,8 @@
       "role": "r1",
       "text": "来て御覧つてば。",
       "emotion": "soft",
-      "pause_before_ms": 700
+      "pause_before_ms": 700,
+      "style": "ヒソヒソ"
     },
     {
       "type": "direction",
@@ -1624,7 +1648,8 @@
       "role": "r1",
       "text": "どつちもほんとだ",
       "emotion": "sad",
-      "pause_before_ms": 400
+      "pause_before_ms": 400,
+      "style": "絶望と敗北"
     },
     {
       "type": "direction",
@@ -1639,7 +1664,8 @@
       "role": "r1",
       "text": "だから、おれは、こんなことぢやいけないと思ふ。が、どうにもならないんだ。",
       "emotion": "sad",
-      "pause_before_ms": 1500
+      "pause_before_ms": 1500,
+      "style": "絶望と敗北"
     },
     {
       "type": "direction",
@@ -1793,7 +1819,8 @@
       "role": "r1",
       "text": "川上んとこぢやないよ。",
       "emotion": "soft",
-      "pause_before_ms": 700
+      "pause_before_ms": 700,
+      "style": "おどおど"
     },
     {
       "type": "direction",
@@ -1823,7 +1850,8 @@
       "role": "r1",
       "text": "玉突だと思つてるんだらう。",
       "emotion": "soft",
-      "pause_before_ms": 700
+      "pause_before_ms": 700,
+      "style": "おどおど"
     },
     {
       "type": "direction",
@@ -1845,7 +1873,8 @@
       "role": "r1",
       "text": "怒つたのか。",
       "emotion": "soft",
-      "pause_before_ms": 700
+      "pause_before_ms": 700,
+      "style": "おどおど"
     },
     {
       "type": "direction",
@@ -1868,7 +1897,8 @@
       "role": "r1",
       "text": "どうしたんだい、一体。",
       "emotion": "soft",
-      "pause_before_ms": 200
+      "pause_before_ms": 200,
+      "style": "おどおど"
     },
     {
       "type": "line",
@@ -1918,7 +1948,8 @@
       "role": "r1",
       "text": "なにを……。",
       "emotion": "calm",
-      "pause_before_ms": 700
+      "pause_before_ms": 700,
+      "style": "おどおど"
     },
     {
       "type": "line",
@@ -1932,7 +1963,8 @@
       "role": "r1",
       "text": "変だぜ。",
       "emotion": "calm",
-      "pause_before_ms": 700
+      "pause_before_ms": 700,
+      "style": "おどおど"
     },
     {
       "type": "line",
@@ -2018,7 +2050,8 @@
       "role": "r1",
       "text": "おれもおそろしい。",
       "emotion": "sad",
-      "pause_before_ms": 400
+      "pause_before_ms": 400,
+      "style": "絶望と敗北"
     },
     {
       "type": "direction",
@@ -2061,7 +2094,8 @@
       "role": "r1",
       "text": "むづかしいもんだな。",
       "emotion": "sad",
-      "pause_before_ms": 700
+      "pause_before_ms": 700,
+      "style": "絶望と敗北"
     },
     {
       "type": "line",
@@ -2131,7 +2165,8 @@
       "role": "r2",
       "text": "もう少しつていふ処ね。",
       "emotion": "soft",
-      "pause_before_ms": 400
+      "pause_before_ms": 400,
+      "style": "ささやき"
     },
     {
       "type": "line",
@@ -2145,7 +2180,8 @@
       "role": "r2",
       "text": "さうぢやないのよ。",
       "emotion": "soft",
-      "pause_before_ms": 700
+      "pause_before_ms": 700,
+      "style": "ささやき"
     },
     {
       "type": "direction",
@@ -2203,7 +2239,8 @@
       "role": "r1",
       "text": "おい、話をしてやらうか。",
       "emotion": "soft",
-      "pause_before_ms": 3000
+      "pause_before_ms": 3000,
+      "style": "ヒソヒソ"
     },
     {
       "type": "line",
@@ -2260,7 +2297,8 @@
       "role": "r2",
       "text": "千枝子ちやんは、おうちにゐるの、今日は。",
       "emotion": "soft",
-      "pause_before_ms": 400
+      "pause_before_ms": 400,
+      "style": "ささやき"
     },
     {
       "type": "direction",
@@ -2275,7 +2313,8 @@
       "role": "r2",
       "text": "およしなさいよ、あなた……",
       "emotion": "soft",
-      "pause_before_ms": 200
+      "pause_before_ms": 200,
+      "style": "ささやき"
     },
     {
       "type": "direction",
@@ -2369,8 +2408,8 @@
     }
   ],
   "credits": [
-    "VOICEVOX:青山龍星",
-    "VOICEVOX:もち子(cv 明日葉よもぎ)",
+    "VOICEVOX:中部つるぎ",
+    "VOICEVOX:暁記ミタマ",
     "VOICEVOX:No.7"
   ]
 }

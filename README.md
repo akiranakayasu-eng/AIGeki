@@ -6,7 +6,8 @@
 
 1. 戯曲のテキスト（青空文庫の txt など）を台本データ `script.json` にする（役名・台詞・ト書き・間）。
 2. VOICEVOX で台詞ごとの音声と、時間の流れ `timeline.json`（各台詞の開始時刻・長さ・口パク用の母音の時刻）を作る。
-3. `web/index.html` で、台詞とト書きを表示しながら順に再生する。台詞を押すとそこから再生。話している役の口が母音に合わせて動く（VRM の口パクの試し）。
+3. `web/index.html` で、台詞とト書きを表示しながら順に再生する。台詞を押すとそこから再生。話している役の顔（イラスト）の口が母音に合わせて動く（VRM の口パクの試し）。
+4. 台詞ごとに、その役の声のスタイル（ノーマル・怒り・ささやき など）を選び直せる。台詞はすべてのスタイルで合成してあるので、選ぶとすぐその声で鳴る。選んだ声はブラウザに残り、「選んだ声をコピー」で書き出せる。台詞には「夫001」のように役ごとの連番が付く。
 
 ## 動かし方
 
@@ -23,6 +24,7 @@ python3 tools/pauses.py plays/<id>/script.json --force
 # 4. 音声と timeline.json を作る（変わった台詞だけ作り直す）
 pip install requests
 python3 tools/synthesize.py plays/<id>/script.json
+# ENGINE を複数起動したときは --engine http://localhost:50021 --engine http://localhost:50022 のように並べると速い
 
 # 5. ページを開く
 python3 -m http.server 8000
@@ -40,10 +42,12 @@ python3 -m http.server 8000
 
 ## 台本データ（script.json）
 
-- `roles[].voice`: `speaker`（VOICEVOX の style id）、`styles`（感情 → style id）、`speedScale`・`pitchScale`・`intonationScale`・`volumeScale`。
+- `roles[].look`: 顔のイラスト（`man` / `woman`）。
+- `roles[].voice`: `speaker`（VOICEVOX の style id）、`styles`（スタイル名 → style id。台詞はここにある全スタイルで合成する）、`emotion_styles`（感情 → 初めに使うスタイル名）、`speedScale`・`pitchScale`・`intonationScale`・`volumeScale`。
 - `narrator.voice`: ト書きを読む声。`read_directions: false` でト書きを読まない。
 - `events[]`: `type` は `line`（台詞）か `direction`（ト書き）。
-  - `emotion`: calm / happy / sad / angry / soft など。`styles` にあればそのスタイルで読む。
+  - `emotion`: calm / happy / sad / angry / soft など。`emotion_styles` で初めのスタイルを決める。
+  - `style`: その台詞で初めに使うスタイル名（`emotion` より優先）。
   - `pause_before_ms`: その前の間。`tools/pauses.py` が初期値を入れる（人が直した値は `--force` を付けない限り残る）。
   - `silent: true`: 読まずに間だけ取るト書き（「間。」「――幕――」、人物表）。
   - `inline: true`: 台詞の中の（　）から分けたト書き。読まない。
