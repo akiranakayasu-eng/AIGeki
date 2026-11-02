@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>朗読劇</title>
+<style>
+  /* 台本の紙面: 上に舞台（話している役の顔）、下に台詞の一覧。台詞ごとに声（スタイル）を選べる */
+  :root {
+    --bg:#faf8f4; --fg:#222; --muted:#776f66; --line:#e4dfd6; --now:#fff3c4; --panel:#f2eee6;
+    --r1:#2f5d8a; --r2:#a3412f; --r3:#3f7a3a; --r4:#7a4f9a;
+    --skin:#f6dcc3; --skin-line:#b98a6a; --hair:#2b2420; --cheek:#f0a99a; --lip:#b5433a; --mouth-in:#7a2b25;
+    --kimono1:#4a6a8c; --kimono2:#e9e2d4; --kimono3:#b34a3c; --kimono4:#efe3c8; --glass:#3a332d;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg:#1b1a18; --fg:#eee; --muted:#a39a90; --line:#36332f; --now:#4a4120; --panel:#25231f;
+    --r1:#8bb8e8; --r2:#f0a08f; --r3:#9fd49a; --r4:#cfa8ef;
+    --skin:#e9cdb3; --skin-line:#9c7458; --hair:#14100d; --cheek:#d98e80; --lip:#a8423a; --mouth-in:#5e1f1a;
+    --kimono1:#5d7fa3; --kimono2:#cfc7b8; --kimono3:#a8473a; --kimono4:#d8ccb2; --glass:#1f1a16; color-scheme:dark; } }
+  :root[data-theme="dark"] {
+    --bg:#1b1a18; --fg:#eee; --muted:#a39a90; --line:#36332f; --now:#4a4120; --panel:#25231f;
+    --r1:#8bb8e8; --r2:#f0a08f; --r3:#9fd49a; --r4:#cfa8ef;
+    --skin:#e9cdb3; --skin-line:#9c7458; --hair:#14100d; --cheek:#d98e80; --lip:#a8423a; --mouth-in:#5e1f1a;
+    --kimono1:#5d7fa3; --kimono2:#cfc7b8; --kimono3:#a8473a; --kimono4:#d8ccb2; --glass:#1f1a16; color-scheme:dark; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif; }
+  header { position:sticky; top:env(safe-area-inset-top, 0px); background:var(--bg); border-bottom:1px solid var(--line); z-index:1;
+    padding-block:10px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); }
+  h1 { font-size:1.2rem; margin:0 0 4px; }
+  .meta { color:var(--muted); font-size:.85rem; }
+  .controls { display:flex; gap:8px; align-items:center; margin-top:8px; flex-wrap:wrap; }
+  button, select { font:inherit; color:var(--fg); }
+  button { padding:6px 14px; border:1px solid var(--line); background:transparent; border-radius:6px; cursor:pointer; }
+  button:focus-visible, select:focus-visible, .ev:focus-visible { outline:2px solid var(--r1); outline-offset:2px; }
+  #stage { display:flex; gap:28px; justify-content:center; padding-top:8px; }
+  .actor { text-align:center; opacity:.62; transition:opacity .2s; font-size:.9rem; }
+  .actor.on { opacity:1; }
+  .actor svg { width:96px; height:96px; display:block; margin:0 auto 2px; }
+  .actor .style { display:block; color:var(--muted); font-size:.72rem; min-height:1em; }
+  main { max-width:780px; margin:0 auto; padding-block:8px 80px;
+    padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); }
+  .ev { padding:6px 10px; border-radius:6px; cursor:pointer; line-height:1.8; display:flex; gap:.6em; align-items:baseline; flex-wrap:wrap; }
+  .ev.now { background:var(--now); }
+  .ev .who { font-weight:bold; white-space:nowrap; }
+  .ev .no { font-size:.62em; font-weight:normal; margin-left:1px; font-variant-numeric:tabular-nums; opacity:.8; }
+  .ev .txt { flex:1 1 20em; min-width:0; }
+  .ev select { font-size:.75rem; padding:1px 2px; border:1px solid var(--line); border-radius:4px; background:var(--bg); max-width:11em; }
+  .ev select.changed { border-color:var(--r2); }
+  .dir { color:var(--muted); padding-left:3em; font-size:.92rem; }
+  .dir.inline { padding-left:5em; }
+  .pause { color:var(--muted); font-size:.75rem; }
+  footer { color:var(--muted); font-size:.8rem; text-align:center; padding:24px 16px; }
+  #note { color:var(--muted); font-size:.8rem; }
+  @media (prefers-reduced-motion: reduce) { .actor { transition:none; } .blink { animation:none !important; } }
+  .blink { animation: blink 5s infinite; transform-origin: center; transform-box: fill-box; }
+  @keyframes blink { 0%, 96%, 100% { transform: scaleY(1); } 98% { transform: scaleY(.1); } }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">読み込み中…</h1>
+  <div class="meta" id="meta"></div>
+  <div class="controls">
+    <button id="play">▶ 再生</button>
+    <button id="stop">■ 停止</button>
+    <span class="meta" id="clock">0:00 / 0:00</span>
+    <button id="export" title="台詞ごとに選んだ声を、台本に反映するための文字列にしてコピーします">選んだ声をコピー</button>
+    <button id="reset">声を初めに戻す</button>
+    <span id="note"></span>
+  </div>
+  <div id="stage"></div>
+</header>
+<main id="list"></main>
+<footer id="credits"></footer>
+<script>
+const play = new URLSearchParams(location.search).get("play") || "sample";
+const base = `../plays/${play}/`;
+const storeKey = `roudokugeki:${play}:styles`;
+// 母音ごとの口の形（横の半径, 縦の半径）
+const mouthShape = { a:[5.5,4.5], i:[6,1.6], u:[3,3], e:[5.5,2.8], o:[4,4.2], n:[4.5,.9], "-":[4.5,.9] };
+let tl, cur = -1, timer = null, raf = null, playing = false, chosen = {}, audioEl = null;
+const banks = {};
+
+const fmt = ms => { const s = Math.round(ms/1000); return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`; };
+const roleIndex = id => tl.roles.findIndex(r => r.id === id);
+const load = () => { try { return JSON.parse(localStorage.getItem(storeKey) || "{}"); } catch { return {}; } };
+const save = () => { try { localStorage.setItem(storeKey, JSON.stringify(chosen)); } catch {} };
+
+// 顔のイラスト。look: "man"（短髪・丸眼鏡・着物）/ "woman"（耳隠し・着物）
+function faceSVG(look) {
+  const man = look !== "woman";
+  const hair = man
+    ? `<path d="M22 44 C20 22 36 12 50 12 C66 12 80 22 78 44 C74 34 66 28 54 27 C44 30 34 32 22 44Z" fill="var(--hair)"/>
+       <path d="M50 13 C47 18 46 22 47 27" stroke="var(--bg)" stroke-width="1" fill="none" opacity=".5"/>`
+    : `<path d="M18 58 C12 30 30 10 50 10 C70 10 88 30 82 58 C80 50 78 44 74 40 C68 30 58 26 50 27 C40 26 30 32 26 40 C22 44 20 50 18 58Z" fill="var(--hair)"/>
+       <path d="M17 52 C14 62 18 70 26 72 C26 64 26 56 28 48Z M83 52 C86 62 82 70 74 72 C74 64 74 56 72 48Z" fill="var(--hair)"/>
+       <path d="M30 30 C36 24 44 22 50 23" stroke="var(--bg)" stroke-width="1.2" fill="none" opacity=".35"/>
+       <circle cx="72" cy="22" r="4" fill="var(--kimono3)"/><circle cx="72" cy="22" r="1.6" fill="var(--kimono4)"/>`;
+  const collar = man
+    ? `<path d="M14 100 C18 86 30 80 40 78 L50 92 L60 78 C70 80 82 86 86 100Z" fill="var(--kimono1)"/>
+       <path d="M40 78 L50 92 L60 78 L56 77 L50 86 L44 77Z" fill="var(--kimono2)"/>`
+    : `<path d="M14 100 C18 86 30 80 40 78 L50 94 L60 78 C70 80 82 86 86 100Z" fill="var(--kimono3)"/>
+       <path d="M40 78 L50 94 L60 78 L56 77 L50 88 L44 77Z" fill="var(--kimono4)"/>`;
+  const eyes = man
+    ? `<g class="blink"><ellipse cx="40" cy="50.5" rx="2.4" ry="2.9" fill="var(--hair)"/><ellipse cx="60" cy="50.5" rx="2.4" ry="2.9" fill="var(--hair)"/>
+       <circle cx="40.9" cy="49.4" r=".8" fill="var(--skin)"/><circle cx="60.9" cy="49.4" r=".8" fill="var(--skin)"/></g>
+       <circle cx="40" cy="50" r="7.5" stroke="var(--glass)" stroke-width="1.6" fill="none"/>
+       <circle cx="60" cy="50" r="7.5" stroke="var(--glass)" stroke-width="1.6" fill="none"/>
+       <path d="M47.5 50 Q50 48 52.5 50" stroke="var(--glass)" stroke-width="1.4" fill="none"/>
+       <path d="M33 40 L46 39 M54 39 L67 40" stroke="var(--hair)" stroke-width="2.2" stroke-linecap="round"/>`
+    : `<g class="blink"><ellipse cx="40" cy="51" rx="2.8" ry="3.6" fill="var(--hair)"/><ellipse cx="60" cy="51" rx="2.8" ry="3.6" fill="var(--hair)"/>
+       <circle cx="41" cy="49.6" r="1" fill="var(--skin)"/><circle cx="61" cy="49.6" r="1" fill="var(--skin)"/>
+       <path d="M36 47.5 Q40 45.5 44 47 L46 45.8 M56 47 Q60 45.5 64 47.5 M56 47 L54 45.8" stroke="var(--hair)" stroke-width="1.4" fill="none" stroke-linecap="round"/></g>
+       <path d="M35 42 Q40 39 45 41 M55 41 Q60 39 65 42" stroke="var(--hair)" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+       <ellipse cx="34" cy="60" rx="5" ry="3" fill="var(--cheek)" opacity=".6"/>
+       <ellipse cx="66" cy="60" rx="5" ry="3" fill="var(--cheek)" opacity=".6"/>`;
+  return `<svg viewBox="0 0 100 100" aria-hidden="true">
+    ${collar}
+    <path d="M44 68 L44 80 L56 80 L56 68Z" fill="var(--skin)"/>
+    <ellipse cx="50" cy="50" rx="${man ? 27 : 25}" ry="${man ? 30 : 29}" fill="var(--skin)" stroke="var(--skin-line)" stroke-width=".8"/>
+    <ellipse cx="23" cy="53" rx="3.5" ry="6" fill="var(--skin)" stroke="var(--skin-line)" stroke-width=".8"/>
+    <ellipse cx="77" cy="53" rx="3.5" ry="6" fill="var(--skin)" stroke="var(--skin-line)" stroke-width=".8"/>
+    ${hair}${eyes}
+    <path d="M50 54 L48 61 L51 61" stroke="var(--skin-line)" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+    <ellipse class="mouth" cx="50" cy="69" rx="4.5" ry=".9" fill="var(--mouth-in)" stroke="var(--lip)" stroke-width="${man ? 1 : 1.6}"/>
+  </svg>`;
+}
+
+// 古い形の timeline.json（台詞ごとの mp3）も読めるようにする
+function normalize(data) {
+  if (data.version === 2) return data;
+  data.items.forEach(it => {
+    if (it.audio) { it.style = ""; it.variants = { "": { audio: it.audio, offset_ms: 0, dur_ms: it.dur_ms, mouth: it.mouth || [] } }; }
+  });
+  data.items.forEach((it, k) => {
+    const prev = data.items[k-1];
+    it.pause_before_ms = prev ? it.start_ms - prev.start_ms - prev.dur_ms : it.start_ms;
+  });
+  return data;
+}
+
+const styleOf = it => (it.variants && (chosen[it.i] in it.variants ? chosen[it.i] : it.style));
+const variantOf = it => it.variants && it.variants[styleOf(it)];
+
+// 選んだ声で、各台詞の開始時刻を計算し直す
+function schedule() {
+  let t = 0;
+  tl.items.forEach(it => { t += it.pause_before_ms || 0; it.at = t; it.len = variantOf(it)?.dur_ms || 0; t += it.len; });
+  tl.total = t;
+  document.getElementById("clock").textContent = `${fmt(cur >= 0 ? tl.items[cur].at : 0)} / ${fmt(t)}`;
+  const n = Object.keys(chosen).length;
+  document.getElementById("note").textContent = n ? `声を変えた台詞 ${n}` : "";
+}
+
+fetch(base + "timeline.json").then(r => r.json()).then(data => {
+  tl = normalize(data);
+  chosen = load();
+  document.title = tl.title + "（朗読劇）";
+  document.getElementById("title").textContent = tl.title;
+  document.getElementById("meta").textContent = `${tl.author}　${tl.roles.map(r => r.name + "：" + (r.voice.name || "")).join("　")}`;
+  document.getElementById("credits").innerHTML = [...(tl.credits || []), tl.source ? `出典: ${tl.source}` : ""].filter(Boolean).join("<br>");
+  const stage = document.getElementById("stage");
+  tl.roles.forEach((r, i) => {
+    const look = r.look || (i % 2 ? "woman" : "man");
+    stage.insertAdjacentHTML("beforeend", `<div class="actor" id="a-${r.id}" style="color:var(--r${i%4+1})">${faceSVG(look)}${r.name}<span class="style"></span></div>`);
+  });
+  const counts = {};
+  const list = document.getElementById("list");
+  tl.items.forEach((it, k) => {
+    const el = document.createElement("div");
+    el.id = "ev" + k;
+    el.tabIndex = 0;
+    if (it.type === "line") {
+      const i = roleIndex(it.role);
+      counts[it.role] = (counts[it.role] || 0) + 1;
+      el.className = "ev";
+      el.innerHTML = `<span class="who" style="color:var(--r${i%4+1})">${tl.roles[i].name}<span class="no">${String(counts[it.role]).padStart(3, "0")}</span></span><span class="txt"></span>`;
+      el.querySelector(".txt").textContent = it.text;
+      const names = Object.keys(it.variants || {});
+      if (names.length > 1) {
+        const sel = document.createElement("select");
+        sel.id = "style" + k;
+        sel.setAttribute("aria-label", "この台詞の声");
+        names.forEach(n => sel.add(new Option(n + (n === it.style ? "（初め）" : ""), n)));
+        sel.value = styleOf(it);
+        sel.classList.toggle("changed", sel.value !== it.style);
+        sel.onclick = e => e.stopPropagation();
+        sel.onchange = () => {
+          if (sel.value === it.style) delete chosen[it.i]; else chosen[it.i] = sel.value;
+          sel.classList.toggle("changed", sel.value !== it.style);
+          save(); schedule(); updateGaps();
+          startAt(k, true);  // 選んだ声をすぐ聞く（その台詞だけ）
+        };
+        el.appendChild(sel);
+      }
+    } else {
+      el.className = "ev dir" + (it.inline ? " inline" : "");
+      el.textContent = it.inline ? `（${it.text}）` : it.text;
+    }
+    el.insertAdjacentHTML("beforeend", `<span class="pause"></span>`);
+    el.onclick = () => startAt(k);
+    el.onkeydown = e => { if (e.key === "Enter" && e.target === el) startAt(k); };
+    list.appendChild(el);
+  });
+  schedule(); updateGaps();
+}).catch(e => { document.getElementById("title").textContent = "timeline.json を読めません: " + e; });
+
+function updateGaps() {
+  tl.items.forEach((it, k) => {
+    const p = document.querySelector(`#ev${k} .pause`);
+    if (p) p.textContent = k > 0 && it.pause_before_ms >= 1000 ? `［間 ${(it.pause_before_ms/1000).toFixed(1)}秒］` : "";
+  });
+}
+
+// つないだ音声は丸ごと読み込んでから鳴らす（Range に答えないサーバー、python -m http.server などでも位置を指定できるように）
+function bank(src) {
+  if (!banks[src]) banks[src] = fetch(base + src).then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); })
+    .then(b => { const a = new Audio(URL.createObjectURL(b)); a.preload = "auto"; return a; });
+  return banks[src];
+}
+function stop() {
+  playing = false; clearTimeout(timer); cancelAnimationFrame(raf);
+  if (audioEl) { audioEl.pause(); audioEl = null; }
+  document.querySelectorAll(".actor").forEach(a => a.classList.remove("on"));
+  setMouth(null);
+}
+function startAt(k, only = false) { stop(); playing = true; step(k, 0, only); }
+function step(k, wait, only) {
+  if (!playing || k >= tl.items.length) { stop(); return; }
+  timer = setTimeout(() => show(k, only), wait);
+}
+function show(k, only) {
+  const it = tl.items[k];
+  document.querySelector(".ev.now")?.classList.remove("now");
+  const el = document.getElementById("ev" + k);
+  el.classList.add("now");
+  el.scrollIntoView({ block: "center", behavior: "smooth" });
+  document.getElementById("clock").textContent = `${fmt(it.at)} / ${fmt(tl.total)}`;
+  cur = k;
+  const next = tl.items[k+1];
+  const gap = only ? 0 : (next ? next.pause_before_ms || 0 : 0);
+  const after = () => { setMouth(null); if (only) stop(); else step(k+1, gap); };
+  document.querySelectorAll(".actor").forEach(a => {
+    const on = it.type === "line" && a.id === "a-" + it.role;
+    a.classList.toggle("on", on);
+    if (on) a.querySelector(".style").textContent = styleOf(it) || "";
+  });
+  const v = variantOf(it);
+  if (!v) { if (only) stop(); else step(k+1, it.len + gap); return; }
+  bank(v.audio).then(a => { if (playing && cur === k) playSegment(it, v, a, after); })
+    .catch(e => { document.getElementById("note").textContent = `音声を読めません（${v.audio}）: ${e.message}`; stop(); });
+}
+function playSegment(it, v, a, after) {
+  audioEl = a;
+  const t0 = v.offset_ms / 1000, t1 = (v.offset_ms + v.dur_ms) / 1000;
+  const go = () => {
+    a.currentTime = t0;
+    a.play().catch(() => stop());
+    const tick = () => {
+      if (!playing || audioEl !== a) return;
+      if (a.currentTime >= t1 || a.ended) { a.pause(); after(); return; }
+      if (it.type === "line") {
+        const ms = (a.currentTime - t0) * 1000;
+        let vw = "-";
+        for (const [t, x] of v.mouth) { if (t <= ms) vw = x; else break; }
+        setMouth(it.role, vw);
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    tick();
+  };
+  if (a.readyState >= 1) go(); else a.addEventListener("loadedmetadata", go, { once: true });
+}
+function setMouth(role, v) {
+  document.querySelectorAll(".actor .mouth").forEach(m => { m.setAttribute("rx", 4.5); m.setAttribute("ry", .9); });
+  if (!role) return;
+  const m = document.querySelector(`#a-${role} .mouth`);
+  const [rx, ry] = mouthShape[v] || mouthShape["-"];
+  m.setAttribute("rx", rx); m.setAttribute("ry", ry);
+}
+document.getElementById("play").onclick = () => startAt(cur < 0 || cur >= tl.items.length - 1 ? 0 : cur);
+document.getElementById("stop").onclick = stop;
+document.getElementById("export").onclick = () => {
+  const out = Object.entries(chosen).map(([i, s]) => ({ i: +i, text: tl.items[+i].text.slice(0, 20), style: s }));
+  const text = JSON.stringify(out, null, 1);
+  const note = document.getElementById("note");
+  navigator.clipboard.writeText(text).then(() => { note.textContent = `${out.length} 件をコピーしました。スレッドに貼ってください`; },
+    () => { note.textContent = "コピーできませんでした: " + text; });
+};
+document.getElementById("reset").onclick = () => {
+  chosen = {}; save();
+  tl.items.forEach((it, k) => { const s = document.getElementById("style" + k); if (s) { s.value = it.style; s.classList.remove("changed"); } });
+  schedule();
+};
+</script>
+</body>
+</html>
