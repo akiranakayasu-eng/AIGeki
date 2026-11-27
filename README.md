@@ -36,7 +36,6 @@ python3 -m http.server 8000
 作品:
 
 - `plays/kamifusen/` … 岸田國士「紙風船」（青空文庫、図書カード https://www.aozora.gr.jp/cards/001154/card52082.html ）。`source.txt` は青空文庫のファイルのまま（Shift_JIS）。台詞 256、音声まで作ってある。`http://localhost:8000/web/?play=kamifusen`
-- `plays/sample/` … 試しの台本（このリポジトリで書いた短い会話）。
 
 旧仮名づかいの作品（青空文庫の新字旧仮名など）は、script.json に `"kana": "historical"` を入れると、`tools/yomi.py` が「行つて→行って」「いゝ→いい」「だらう→だろう」のように読みに直してから合成する（表示は元のまま）。規則で直らない台詞は、その event に `"read": "読み"` を書く。`python3 tools/yomi.py plays/<id>/script.json` で読みの一覧を確かめられる。
 
@@ -77,7 +76,6 @@ python3 -m http.server 8000
 音声は VOICEVOX で合成している。使った話者のクレジット:
 
 - 紙風船: `VOICEVOX:中部つるぎ`、`VOICEVOX:暁記ミタマ`、`VOICEVOX:No.7`（ト書き）
-- 試しの台本（plays/sample）: `VOICEVOX:青山龍星`、`VOICEVOX:もち子(cv 明日葉よもぎ)`、`VOICEVOX:No.7`
 
 話者ごとの規約（`plays/*/voices.md` に要点）に従う。注意:
 
